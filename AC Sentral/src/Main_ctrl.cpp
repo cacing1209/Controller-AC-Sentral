@@ -1,15 +1,19 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <common.h>
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define OLED_RESET     -1
+#define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-#define NUMFLAKES     10
-#define LOGO_HEIGHT   16
-#define LOGO_WIDTH    16
-static const unsigned char PROGMEM logo_bmp[] =
-  {  };
+#define NUMFLAKES 10
+#define LOGO_HEIGHT 16
+#define LOGO_WIDTH 16
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+menu mainMenu;
+#define menu_UP 11
+#define menu_DOWN 12
+#define menu_CONFIRM 13
 
 const int ov1 = A1;
 const int ov2 = A2;
@@ -37,14 +41,60 @@ int a06 = 0;
 int a07 = 0;
 int a08 = 0;
 int a09 = 0;
+#define sizeTxtmenu 3
 
+void setup()
+{
+  mainMenu.begin("DQ", 2000);
+  pinMode(menu_CONFIRM, INPUT);
+  pinMode(menu_UP, INPUT);
+  pinMode(menu_DOWN, INPUT);
+}
 
+uint8_t idxMenu = 0;
+void debouceBuntton(int xp)
+{
+  static unsigned long previouseTime = 0;
+  if (millis() - previouseTime > 1000) // debouce press
+  {
+    idxMenu += xp;
+    if (idxMenu > 4)
+      idxMenu = 0;
+    if (idxMenu == 0 && xp == -1)
+      idxMenu = 3;
+    previouseTime = millis();
+  }
+}
 
+void IndexMenu()
+{
 
-void setup() {
-  //POWER OFF/ON
+  if (digitalRead(menu_UP) == HIGH)
+  {
+    debouceBuntton(1);
+  }
+  else if (digitalRead(menu_DOWN) == HIGH)
+  {
+  }
+  else
+  {
+  }
+}
+void MenuSetup()
+{
+  String menutxt[sizeTxtmenu] = {"MODE COOL", "MODE FAN", "MODE TURBO"};
+}
+
+void loop()
+{
+  MenuSetup();
+}
+
+void setup()
+{
+  // POWER OFF/ON
   pinMode(OFF, INPUT);
-  //M
+  // M
   pinMode(sw1, INPUT);
   pinMode(sw2, INPUT);
   pinMode(sw3, INPUT);
@@ -52,7 +102,7 @@ void setup() {
   pinMode(8, OUTPUT);
   pinMode(9, OUTPUT);
 
-  //OL
+  // OL
   pinMode(ov1, INPUT);
   pinMode(ov2, INPUT);
   pinMode(ov3, INPUT);
@@ -63,35 +113,32 @@ void setup() {
   pinMode(ov8, INPUT);
   pinMode(ov9, INPUT);
 
-  //KT
+  // KT
   pinMode(6, OUTPUT);
   pinMode(7, OUTPUT);
   pinMode(8, OUTPUT);
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
-  //OVR
+  // OVR
   pinMode(3, OUTPUT);
   pinMode(4, OUTPUT);
   pinMode(5, OUTPUT);
 
-  //buzz
+  // buzz
   pinMode(2, OUTPUT);
-
 
   Serial.begin(9600);
 
-
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  {
+    Serial.println(F("SSD1306 alokasi gagal"));
+    for (;;)
+      ;
   }
   display.invertDisplay(true);
   delay(1000);
   display.invertDisplay(false);
   delay(1000);
-
-
-
 
   display.clearDisplay();
   display.setTextSize(3);
@@ -102,19 +149,15 @@ void setup() {
   delay(2000);
   display.clearDisplay();
 
-
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(25, 35);
   display.println(F("WELCOME"));
   display.display();
   delay(2000);
-  //FANSTART
+  // FANSTART
   display.clearDisplay();
   display.display();
-
-
-
 
   a01 = digitalRead(ov1);
   a02 = digitalRead(ov2);
@@ -125,7 +168,7 @@ void setup() {
   a07 = digitalRead(ov7);
   a08 = digitalRead(ov8);
   a09 = digitalRead(ov9);
-  ///comp1
+  /// comp1
   if (a01 == HIGH)
   {
     display.clearDisplay();
@@ -135,7 +178,11 @@ void setup() {
     display.println(F("ERORC1"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(10, LOW);
+    delay(10000);
   }
 
   /// comp2
@@ -148,10 +195,14 @@ void setup() {
     display.println(F("ERORC2"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(9, LOW);
+    delay(10000);
   }
 
-  ///comp3
+  /// comp3
   if (a03 == HIGH)
   {
     display.clearDisplay();
@@ -161,10 +212,14 @@ void setup() {
     display.println(F("ERORC3"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(8, LOW);
+    delay(10000);
   }
 
-  ///motor
+  /// motor
   if (a04 == HIGH)
   {
     display.clearDisplay();
@@ -174,9 +229,13 @@ void setup() {
     display.println(F("ERORC4"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(7, LOW);
+    delay(10000);
   }
-  ///WPUMP
+  /// WPUMP
   if (a05 == HIGH)
   {
     display.clearDisplay();
@@ -186,7 +245,11 @@ void setup() {
     display.println(F("ERORC5"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(6, LOW);
+    delay(10000);
   }
 
   /// HL1
@@ -199,9 +262,13 @@ void setup() {
     display.println(F("ERORH1"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(10, LOW);
+    delay(10000);
   }
-  ///HL2
+  /// HL2
   if (a07 == HIGH)
   {
     display.clearDisplay();
@@ -211,10 +278,14 @@ void setup() {
     display.println(F("ERORH2"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(9, LOW);
+    delay(10000);
   }
 
-  ///HL3
+  /// HL3
   if (a08 == HIGH)
   {
     display.clearDisplay();
@@ -224,11 +295,12 @@ void setup() {
     display.println(F("ERORH3"));
     display.display();
 
-    digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+    digitalWrite(5, HIGH);
+    digitalWrite(4, LOW);
+    digitalWrite(2, HIGH);
+    digitalWrite(8, LOW);
+    delay(10000);
   }
-
-
-
 }
 
 void Display()
@@ -240,8 +312,8 @@ void Display()
   display.println(F("ERORC1"));
   display.display();
 }
-void loop() {
-
+void loop()
+{
 
 OFFMODE:
   while (1)
@@ -267,20 +339,21 @@ OFFMODE:
       // digitalWrite(6, LOW);
       // digitalWrite(7, LOW);
       // delay(5000);
-      for (int i = 1; i < 10; i++) {
+      for (int i = 1; i < 10; i++)
+      {
         digitalWrite(i, LOW);
-        if (i = 7 || i == 6) {
+        if (i = 7 || i == 6)
+        {
           delay(2000);
         }
       }
       goto LCDOFF;
-
     }
 
     if (MATI == HIGH)
     {
 
-menu:
+    menu:
       while (1)
       {
         display.clearDisplay();
@@ -305,23 +378,27 @@ menu:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
-        if (ok == LOW) {
+        if (ok == LOW)
+        {
           delay(300);
           goto COMP1;
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto next1;
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           goto timer;
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -331,7 +408,11 @@ menu:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -344,10 +425,14 @@ menu:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -357,10 +442,14 @@ menu:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -370,9 +459,13 @@ menu:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -382,7 +475,11 @@ menu:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -395,9 +492,13 @@ menu:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -407,10 +508,14 @@ menu:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -420,13 +525,15 @@ menu:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
       }
 
-COMP1:
+    COMP1:
       while (1)
       {
 
@@ -437,7 +544,6 @@ COMP1:
         display.println(F(" COMP1"));
         display.display();
 
-
         ok = digitalRead(sw1);
         next = digitalRead(sw2);
         back = digitalRead(sw3);
@@ -451,24 +557,28 @@ COMP1:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
 
-        if (ok == LOW) {
+        if (ok == LOW)
+        {
           delay(300);
           digitalWrite(10, HIGH);
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto COMP2;
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           digitalWrite(10, LOW);
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -478,7 +588,11 @@ COMP1:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -491,10 +605,14 @@ COMP1:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -504,10 +622,14 @@ COMP1:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -517,9 +639,13 @@ COMP1:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -529,7 +655,11 @@ COMP1:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -542,9 +672,13 @@ COMP1:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -554,10 +688,14 @@ COMP1:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -567,19 +705,15 @@ COMP1:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
-
-
-
-
-
-
       }
 
-COMP2:
+    COMP2:
       while (1)
       {
 
@@ -590,7 +724,6 @@ COMP2:
         display.println(F("COMP2"));
         display.display();
 
-
         ok = digitalRead(sw1);
         next = digitalRead(sw2);
         back = digitalRead(sw3);
@@ -604,24 +737,29 @@ COMP2:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
 
-        if (ok == LOW) {
+        if (ok == LOW)
+        {
           delay(300);
-          digitalWrite(9, HIGH);;
+          digitalWrite(9, HIGH);
+          ;
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto COMP3;
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           digitalWrite(9, LOW);
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -631,7 +769,11 @@ COMP2:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -644,10 +786,14 @@ COMP2:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -657,10 +803,14 @@ COMP2:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -670,9 +820,13 @@ COMP2:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -682,7 +836,11 @@ COMP2:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -695,9 +853,13 @@ COMP2:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -707,10 +869,14 @@ COMP2:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -720,19 +886,15 @@ COMP2:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
-
-
-
-
-
-
       }
 
-COMP3:
+    COMP3:
       while (1)
       {
 
@@ -743,7 +905,6 @@ COMP3:
         display.println(F("COMP3"));
         display.display();
 
-
         ok = digitalRead(sw1);
         next = digitalRead(sw2);
         back = digitalRead(sw3);
@@ -757,23 +918,27 @@ COMP3:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
-        if (ok == LOW) {
+        if (ok == LOW)
+        {
           delay(300);
           digitalWrite(8, HIGH);
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto menu;
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           digitalWrite(8, LOW);
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -783,7 +948,11 @@ COMP3:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -796,10 +965,14 @@ COMP3:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -809,10 +982,14 @@ COMP3:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -822,9 +999,13 @@ COMP3:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -834,7 +1015,11 @@ COMP3:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -847,9 +1032,13 @@ COMP3:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -859,10 +1048,14 @@ COMP3:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -872,20 +1065,15 @@ COMP3:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
-
-
-
-
-
-
       }
 
-
-next1:
+    next1:
       while (1)
       {
 
@@ -908,25 +1096,32 @@ next1:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
 
-        if (ok == LOW) {
-          delay(300); digitalWrite(8, LOW);
-          delay(300); digitalWrite(9, LOW);
-          delay(300); digitalWrite(10, LOW);
+        if (ok == LOW)
+        {
+          delay(300);
+          digitalWrite(8, LOW);
+          delay(300);
+          digitalWrite(9, LOW);
+          delay(300);
+          digitalWrite(10, LOW);
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           goto menu;
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto modeturboxxx;
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -936,7 +1131,11 @@ next1:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -949,10 +1148,14 @@ next1:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -962,10 +1165,14 @@ next1:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -975,9 +1182,13 @@ next1:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -987,7 +1198,11 @@ next1:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -1000,9 +1215,13 @@ next1:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -1012,10 +1231,14 @@ next1:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -1025,19 +1248,15 @@ next1:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
-
-
-
-
-
-
       }
 
-modeturboxxx:
+    modeturboxxx:
       while (1)
       {
         display.clearDisplay();
@@ -1060,13 +1279,14 @@ modeturboxxx:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
 
-        if (ok == LOW) {
-
+        if (ok == LOW)
+        {
 
           display.clearDisplay();
           display.setTextSize(2);
@@ -1075,9 +1295,12 @@ modeturboxxx:
           display.println(F("PROSES!!!"));
           display.display();
 
-          delay(7000); digitalWrite(8, HIGH);
-          delay(12000); digitalWrite(9, HIGH);
-          delay(9000); digitalWrite(10, HIGH);
+          delay(7000);
+          digitalWrite(8, HIGH);
+          delay(12000);
+          digitalWrite(9, HIGH);
+          delay(9000);
+          digitalWrite(10, HIGH);
 
           display.clearDisplay();
           display.setTextSize(1);
@@ -1085,17 +1308,18 @@ modeturboxxx:
           display.setCursor(15, 0);
           display.println(F(" MODE TURBO ACTIV  "));
           display.display();
-
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto timer;
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           goto next1;
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -1105,7 +1329,11 @@ modeturboxxx:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -1118,10 +1346,14 @@ modeturboxxx:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -1131,10 +1363,14 @@ modeturboxxx:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -1144,9 +1380,13 @@ modeturboxxx:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -1156,7 +1396,11 @@ modeturboxxx:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -1169,9 +1413,13 @@ modeturboxxx:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -1181,10 +1429,14 @@ modeturboxxx:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -1194,20 +1446,15 @@ modeturboxxx:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
-
-
-
-
-
-
-
       }
 
-
-timer:
+    timer:
       while (1)
       {
 
@@ -1230,31 +1477,34 @@ timer:
         a08 = digitalRead(ov8);
         a09 = digitalRead(ov9);
         MATI = digitalRead(OFF);
-        if (MATI == LOW) {
+        if (MATI == LOW)
+        {
           delay(3000);
           goto OFFMODE;
         }
-        if (ok == LOW) {
+        if (ok == LOW)
+        {
 
+          delay(300);
+          digitalWrite(8, LOW);
+          delay(300);
+          digitalWrite(9, LOW);
+          delay(300);
+          digitalWrite(10, LOW);
 
-
-          delay(300); digitalWrite(8, LOW);
-          delay(300); digitalWrite(9, LOW);
-          delay(300); digitalWrite(10, LOW);
-
-
-
-          //MODE TIMER
+          // MODE TIMER
         }
-        if (back == LOW) {
+        if (back == LOW)
+        {
           delay(300);
           goto modeturboxxx;
         }
-        if (next == LOW) {
+        if (next == LOW)
+        {
           delay(300);
           goto menu;
         }
-        ///comp1
+        /// comp1
         if (a01 == HIGH)
         {
           display.clearDisplay();
@@ -1264,7 +1514,11 @@ timer:
           display.println(F("ERORC1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
 
         /// comp2
@@ -1277,10 +1531,14 @@ timer:
           display.println(F("ERORC2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///comp3
+        /// comp3
         if (a03 == HIGH)
         {
           display.clearDisplay();
@@ -1290,10 +1548,14 @@ timer:
           display.println(F("ERORC3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
 
-        ///motor
+        /// motor
         if (a04 == HIGH)
         {
           display.clearDisplay();
@@ -1303,9 +1565,13 @@ timer:
           display.println(F("ERORC4"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(7, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(7, LOW);
+          delay(10000);
         }
-        ///WPUMP
+        /// WPUMP
         if (a05 == HIGH)
         {
           display.clearDisplay();
@@ -1315,7 +1581,11 @@ timer:
           display.println(F("ERORC5"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(6, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(6, LOW);
+          delay(10000);
         }
 
         /// HL1
@@ -1328,9 +1598,13 @@ timer:
           display.println(F("ERORH1"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(10, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(10, LOW);
+          delay(10000);
         }
-        ///HL2
+        /// HL2
         if (a07 == HIGH)
         {
           display.clearDisplay();
@@ -1340,10 +1614,14 @@ timer:
           display.println(F("ERORH2"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(9, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(9, LOW);
+          delay(10000);
         }
 
-        ///HL3
+        /// HL3
         if (a08 == HIGH)
         {
           display.clearDisplay();
@@ -1353,25 +1631,27 @@ timer:
           display.println(F("ERORH3"));
           display.display();
 
-          digitalWrite(5, HIGH); digitalWrite(4, LOW); digitalWrite(2, HIGH); digitalWrite(8, LOW); delay(10000);
+          digitalWrite(5, HIGH);
+          digitalWrite(4, LOW);
+          digitalWrite(2, HIGH);
+          digitalWrite(8, LOW);
+          delay(10000);
         }
-
       }
     }
   }
 
-
 LCDOFF:
-  while (1) {
+  while (1)
+  {
 
     MATI = digitalRead(OFF);
     display.clearDisplay();
     display.display();
-    if (MATI == HIGH) {
+    if (MATI == HIGH)
+    {
       delay(300);
       goto OFFMODE;
     }
   }
-
 }
-
