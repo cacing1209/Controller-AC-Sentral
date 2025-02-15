@@ -1,1657 +1,462 @@
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <common.h>
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C
-#define NUMFLAKES 10
-#define LOGO_HEIGHT 16
-#define LOGO_WIDTH 16
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-menu mainMenu;
-#define menu_UP 11
-#define menu_DOWN 12
-#define menu_CONFIRM 13
+int checkSafetySwitch();
+void safetyShutdown();
 
-const int ov1 = A1;
-const int ov2 = A2;
-const int ov3 = A3;
-const int ov4 = A4;
-const int ov5 = A5;
-const int ov6 = A6;
-const int ov7 = A7;
-const int ov8 = A8;
-const int ov9 = A9;
-const int sw1 = 13;
-const int sw2 = 12;
-const int sw3 = 11;
-const int OFF = A10;
-int MATI = 0;
-int ok = 0;
-int next = 0;
-int back = 0;
-int a01 = 0;
-int a02 = 0;
-int a03 = 0;
-int a04 = 0;
-int a05 = 0;
-int a06 = 0;
-int a07 = 0;
-int a08 = 0;
-int a09 = 0;
-#define sizeTxtmenu 3
+void displayMenu()
+{
+  lcd.clear();
+  switch (subMenu)
+  {
+  case 0:
+    for (int i = 0; i < menuDisplayLimit; i++)
+    {
+      String menuSelect = (menuIndex == i) ? "> " : "  ";
+      menuSelect.concat(menu1[i]);
+      lcd.setCursor(0, i);
+      lcd.print(menuSelect);
+    }
+
+    break;
+
+  case 1:
+    for (int i = 0; i < 3; i++)
+    {
+      String kompSelect = (menuIndex == i) ? "> " : "  ";
+      kompSelect.concat("Kompresor ");
+      kompSelect.concat(i + 1);
+      kompSelect.concat(": ");
+      kompSelect.concat((kompresorAktif & kompFlags[i]) ? "ON" : "OFF");
+      lcd.setCursor(0, i);
+      lcd.print(kompSelect);
+      lcd.setCursor(0, 3);
+    }
+
+    if (menuIndex == 3)
+    {
+      lcd.print("> Kembali");
+      putMemo(c[3], kompresorAktif);
+    }
+
+    else
+    {
+      lcd.print("  Kembali");
+    }
+    break;
+  }
+}
+
+void displayConfirmation()
+{
+  isConfirming = true;
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print("Konfirmasi:");
+  lcd.setCursor(0, 2);
+  lcd.print("OK untuk konfirmasi");
+}
+
+void activateCoolMode()
+{
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print("Proses...");
+  int kompresorPins[3] = {kompresor1Pin, kompresor2Pin, kompresor3Pin};
+  for (int i = 0; i < 3; i++)
+  {
+    digitalWrite(kompresorPins[i], (kompresorAktif & kompFlags[i]) ? HIGH : LOW);
+    for (int check = 0; check < 20; check++)
+    {
+      delay(100);
+      if (checkSafetySwitch() > 0)
+      {
+        safetyShutdown();
+        return;
+      }
+    }
+  }
+
+  digitalWrite(fanPin, HIGH);
+  digitalWrite(waterpumpPin, HIGH);
+}
+
+void safetyShutdown()
+{
+  int kompresorPins[3] = {kompresor1Pin, kompresor2Pin, kompresor3Pin};
+  for (int i = 0; i < 3; i++)
+  {
+    digitalWrite(kompresorPins[i], LOW);
+  }
+
+  digitalWrite(waterpumpPin, LOW);
+  digitalWrite(fanPin, LOW);
+  delay(1000);
+}
+
+int checkSafetySwitch()
+{
+  for (int i = 0; i < numSafetySwitches; ++i)
+  {
+    if (digitalRead(safetySwitchPins[i]) == HIGH)
+    {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Safety Switch Error C ");
+      lcd.print(i + 1);
+      return i + 1;
+    }
+  }
+
+  return 0;
+}
+
+void activatedModeTurbo()
+{
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print("Proses...");
+  int kompresorPins[3] = {kompresor1Pin, kompresor2Pin, kompresor3Pin};
+  for (int i = 0; i < 3; i++)
+  {
+    digitalWrite(kompresorPins[i], (kompresorAktif & kompFlags[i]) ? HIGH : LOW);
+    for (int check = 0; check < (i == 1 ? 50 : 30); check++)
+    {
+      delay(100);
+      if (checkSafetySwitch() > 0)
+      {
+        safetyShutdown();
+        return;
+      }
+    }
+  }
+
+  digitalWrite(fanPin, HIGH);
+  digitalWrite(waterpumpPin, HIGH);
+}
+
+void activatedModeFan()
+{
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print("Proses...");
+  int kompresorPins[3] = {kompresor1Pin, kompresor2Pin, kompresor3Pin};
+  for (int i = 0; i < 3; i++)
+  {
+    digitalWrite(kompresorPins[i], LOW);
+  }
+
+  digitalWrite(fanPin, HIGH);
+  digitalWrite(waterpumpPin, LOW);
+}
+
+void timerMode()
+{
+  lcd.clear();
+  lcd.setCursor(1, 0);
+  lcd.print("push next to handle");
+  lcd.setCursor(0, 1);
+  lcd.print(" TIMER ON");
+  lcd.setCursor(0, 2);
+  lcd.print(" TIMER OFF");
+  int xy = 0, x[] = {1, 2, 3}, y[] = {1, 2, 3}, i;
+  do
+  {
+    for (i = 0; i < xy; i++)
+    {
+      lcd.setCursor(0, xy);
+      lcd.print(">");
+    }
+
+    if (digitalRead(nextButtonPin) == HIGH)
+    {
+      xy++;
+      if (xy > 2)
+      {
+        xy = 1;
+      }
+
+      lcd.setCursor(0, i);
+      lcd.print(" ");
+      delay(100);
+    }
+
+    else if (digitalRead(okButtonPin) == HIGH)
+    {
+      if (i == 2)
+      {
+        isConfirming = false;
+        break;
+      }
+    }
+
+    else if (digitalRead(timerPin) == HIGH)
+    {
+      int check = 0;
+
+      if ((kompresorAktif & kompFlags[0]) == kompFlags[0])
+      {
+        digitalWrite(kompresor1Pin, HIGH);
+      }
+
+      else
+      {
+        digitalWrite(kompresor1Pin, LOW);
+      }
+
+      while (check < 20)
+      {
+        delay(100);
+        if (checkSafetySwitch() > 0)
+        {
+          safetyShutdown();
+          return;
+        }
+
+        check++;
+      }
+
+      check = 0;
+
+      if ((kompresorAktif & kompFlags[1]) == kompFlags[1])
+      {
+        digitalWrite(kompresor2Pin, HIGH);
+      }
+
+      else
+      {
+        digitalWrite(kompresor2Pin, LOW);
+      }
+
+      while (check < 20)
+      {
+        delay(100);
+        if (checkSafetySwitch() > 0)
+        {
+          safetyShutdown();
+          return;
+        }
+
+        check++;
+      }
+
+      check = 0;
+
+      if ((kompresorAktif & kompFlags[2]) == kompFlags[2])
+      {
+        digitalWrite(kompresor3Pin, HIGH);
+      }
+
+      else
+      {
+        digitalWrite(kompresor3Pin, LOW);
+      }
+
+      while (check < 20)
+      {
+        delay(100);
+        if (checkSafetySwitch() > 0)
+        {
+          safetyShutdown();
+          return;
+        }
+
+        check++;
+      }
+
+      digitalWrite(fanPin, HIGH);
+      digitalWrite(waterpumpPin, HIGH);
+    }
+
+  } while (isConfirming);
+}
+
+float showsuhu(float S1, float S2, float S3)
+{
+
+  if (digitalRead(nextButtonPin) == HIGH)
+  {
+    if (digitalRead(okButtonPin) == HIGH)
+    {
+      a += 1;
+    }
+  }
+
+  if (a == -1)
+  {
+    lcd.clear();
+    a = 0;
+  }
+
+  switch (a)
+  {
+  case 0:
+    lcd.setCursor(5, 1);
+    lcd.print(" SUHU ");
+    lcd.print(S1);
+    lcd.print(" C ");
+    break;
+  case 1:
+    lcd.setCursor(5, 1);
+    lcd.print(" SUHU ");
+    lcd.print(S2);
+    lcd.print(" F ");
+    break;
+  case 2:
+    lcd.setCursor(5, 1);
+    lcd.print(" SUHU ");
+    lcd.print(S3);
+    lcd.print(" K ");
+    break;
+  }
+}
+
+void handleConfirmation()
+{
+  switch (menuIndex)
+  {
+  case 1:
+    activateCoolMode();
+    break;
+  case 2:
+    activatedModeTurbo();
+    break;
+  case 3:
+    activatedModeFan();
+    break;
+  case 4:
+    timerMode();
+    break;
+  }
+
+  isConfirming = false;
+  displayMenu();
+}
 
 void setup()
 {
-  mainMenu.begin("DQ", 2000);
-  pinMode(menu_CONFIRM, INPUT);
-  pinMode(menu_UP, INPUT);
-  pinMode(menu_DOWN, INPUT);
-}
-
-uint8_t idxMenu = 0;
-void debouceBuntton(int xp)
-{
-  static unsigned long previouseTime = 0;
-  if (millis() - previouseTime > 1000) // debouce press
-  {
-    idxMenu += xp;
-    if (idxMenu > 4)
-      idxMenu = 0;
-    if (idxMenu == 0 && xp == -1)
-      idxMenu = 3;
-    previouseTime = millis();
-  }
-}
-
-void IndexMenu()
-{
-
-  if (digitalRead(menu_UP) == HIGH)
-  {
-    debouceBuntton(1);
-  }
-  else if (digitalRead(menu_DOWN) == HIGH)
-  {
-  }
-  else
-  {
-  }
-}
-void MenuSetup()
-{
-  String menutxt[sizeTxtmenu] = {"MODE COOL", "MODE FAN", "MODE TURBO"};
-}
-
-void loop()
-{
-  MenuSetup();
-}
-
-void setup()
-{
-  // POWER OFF/ON
-  pinMode(OFF, INPUT);
-  // M
-  pinMode(sw1, INPUT);
-  pinMode(sw2, INPUT);
-  pinMode(sw3, INPUT);
-  pinMode(10, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(9, OUTPUT);
-
-  // OL
-  pinMode(ov1, INPUT);
-  pinMode(ov2, INPUT);
-  pinMode(ov3, INPUT);
-  pinMode(ov4, INPUT);
-  pinMode(ov5, INPUT);
-  pinMode(ov6, INPUT);
-  pinMode(ov7, INPUT);
-  pinMode(ov8, INPUT);
-  pinMode(ov9, INPUT);
-
-  // KT
-  pinMode(6, OUTPUT);
-  pinMode(7, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(9, OUTPUT);
-  pinMode(10, OUTPUT);
-  // OVR
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-
-  // buzz
-  pinMode(2, OUTPUT);
-
   Serial.begin(9600);
+  lcd.backlight();
+  lcd.begin(20, 4);
+  pinMode(nextButtonPin, INPUT);
+  pinMode(okButtonPin, INPUT);
+  pinMode(kompresor1Pin, OUTPUT);
+  pinMode(kompresor2Pin, OUTPUT);
+  pinMode(kompresor3Pin, OUTPUT);
+  pinMode(fanPin, OUTPUT);
+  pinMode(waterpumpPin, OUTPUT);
+  getMemo(c[0], celsius);
+  getMemo(c[1], Farenhet);
+  getMemo(c[2], kelvin);
+  getMemo(c[3], kompresorAktif);
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  for (int i = 0; i < numSafetySwitches; ++i)
   {
-    Serial.println(F("SSD1306 alokasi gagal"));
-    for (;;)
-      ;
-  }
-  display.invertDisplay(true);
-  delay(1000);
-  display.invertDisplay(false);
-  delay(1000);
-
-  display.clearDisplay();
-  display.setTextSize(3);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(50, 15);
-  display.println(F("DQ"));
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(25, 35);
-  display.println(F("WELCOME"));
-  display.display();
-  delay(2000);
-  // FANSTART
-  display.clearDisplay();
-  display.display();
-
-  a01 = digitalRead(ov1);
-  a02 = digitalRead(ov2);
-  a03 = digitalRead(ov3);
-  a04 = digitalRead(ov4);
-  a05 = digitalRead(ov5);
-  a06 = digitalRead(ov6);
-  a07 = digitalRead(ov7);
-  a08 = digitalRead(ov8);
-  a09 = digitalRead(ov9);
-  /// comp1
-  if (a01 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORC1"));
-    display.display();
-
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(10, LOW);
-    delay(10000);
+    pinMode(safetySwitchPins[i], INPUT);
   }
 
-  /// comp2
-  if (a02 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORC2"));
-    display.display();
+  displayMenu();
+}
 
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(9, LOW);
-    delay(10000);
+void Setting()
+{
+
+  int nextButtonState = digitalRead(nextButtonPin);
+  int okButtonState = digitalRead(okButtonPin);
+
+  if (nextButtonState)
+  {
+    a = -1;
+    waktuakhir = waktu;
+    gettempsuhu = waktu;
+    lcd.backlight();
+    menuIndex = (menuIndex + 1) % menuDisplayLimit;
+    displayMenu();
+    return;
   }
 
-  /// comp3
-  if (a03 == HIGH)
+  else if (okButtonState)
   {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORC3"));
-    display.display();
+    a = -1;
+    gettempsuhu = waktu;
+    waktuakhir = waktu;
+    lcd.backlight();
+    if (isConfirming)
+    {
+      handleConfirmation();
+      return;
+    }
 
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(8, LOW);
-    delay(10000);
-  }
+    if (menuIndex == 0 && subMenu == 0)
+    {
+      subMenu = 1;
+      menuIndex = 0;
+      displayMenu();
+      return;
+    }
 
-  /// motor
-  if (a04 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORC4"));
-    display.display();
+    if (subMenu == 0)
+    {
+      displayConfirmation();
+      return;
+    }
 
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(7, LOW);
-    delay(10000);
-  }
-  /// WPUMP
-  if (a05 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORC5"));
-    display.display();
+    if (subMenu == 1)
+    {
+      if (menuIndex == 3)
+      {
+        subMenu = 0;
+        menuIndex = 0;
+        displayMenu();
+        return;
+      }
 
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(6, LOW);
-    delay(10000);
-  }
-
-  /// HL1
-  if (a06 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORH1"));
-    display.display();
-
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(10, LOW);
-    delay(10000);
-  }
-  /// HL2
-  if (a07 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORH2"));
-    display.display();
-
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(9, LOW);
-    delay(10000);
-  }
-
-  /// HL3
-  if (a08 == HIGH)
-  {
-    display.clearDisplay();
-    display.setTextSize(3);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(19, 20);
-    display.println(F("ERORH3"));
-    display.display();
-
-    digitalWrite(5, HIGH);
-    digitalWrite(4, LOW);
-    digitalWrite(2, HIGH);
-    digitalWrite(8, LOW);
-    delay(10000);
+      kompresorAktif ^= kompFlags[menuIndex];
+      displayMenu();
+      return;
+    }
   }
 }
 
-void Display()
+void standby()
 {
-  display.clearDisplay();
-  display.setTextSize(3);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(19, 20);
-  display.println(F("ERORC1"));
-  display.display();
+  int analogValue = analogRead(thermis);
+  celsius = 1 / (log(1 / (1023. / analogValue - 1)) / BETA + 1.0 / 298.15) - 273.15;
+  Farenhet = (celsius * 9 / 5) + 32;
+  kelvin = celsius + 273.15;
+  putMemo(addres, celsius);
+  putMemo(c[0], Farenhet);
+  putMemo(c[1], Farenhet);
+  putMemo(c[2], kelvin);
+  Serial.print("value my temp is = ");
+  Serial.print(celsius);
+  Serial.println("C");
+  Serial.print("value my temp is = ");
+  Serial.print(kelvin);
+  Serial.println("K");
+  Serial.print("value my temp is = ");
+  Serial.print(Farenhet);
+  Serial.println("K");
+
+  if (waktu - waktuakhir > (5000 * 2))
+  {
+    showsuhu(celsius, Farenhet, kelvin);
+  }
 }
 void loop()
 {
-
-OFFMODE:
-  while (1)
+  waktu = millis();
+  if (checkSafetySwitch() > 0)
   {
-    MATI = digitalRead(OFF);
-    if (MATI == LOW)
-    {
-      display.clearDisplay();
-      display.setTextSize(3);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(15, 0);
-      display.println(F("POWER  OFF"));
-      display.display();
-
-      // digitalWrite(2, LOW);
-      // digitalWrite(3, LOW);
-      // digitalWrite(4, LOW);
-      // digitalWrite(5, LOW);
-      // digitalWrite(8, LOW);
-      // digitalWrite(9, LOW);
-      // digitalWrite(10, LOW);
-      // delay(2000);
-      // digitalWrite(6, LOW);
-      // digitalWrite(7, LOW);
-      // delay(5000);
-      for (int i = 1; i < 10; i++)
-      {
-        digitalWrite(i, LOW);
-        if (i = 7 || i == 6)
-        {
-          delay(2000);
-        }
-      }
-      goto LCDOFF;
-    }
-
-    if (MATI == HIGH)
-    {
-
-    menu:
-      while (1)
-      {
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(15, 0);
-        display.println(F(" MODE   COOL  "));
-        display.display();
-        digitalWrite(7, HIGH);
-        digitalWrite(6, HIGH);
-
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-        if (ok == LOW)
-        {
-          delay(300);
-          goto COMP1;
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto next1;
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          goto timer;
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    COMP1:
-      while (1)
-      {
-
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(12, 16);
-        display.println(F(" COMP1"));
-        display.display();
-
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-
-        if (ok == LOW)
-        {
-          delay(300);
-          digitalWrite(10, HIGH);
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto COMP2;
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          digitalWrite(10, LOW);
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    COMP2:
-      while (1)
-      {
-
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(12, 16);
-        display.println(F("COMP2"));
-        display.display();
-
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-
-        if (ok == LOW)
-        {
-          delay(300);
-          digitalWrite(9, HIGH);
-          ;
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto COMP3;
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          digitalWrite(9, LOW);
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    COMP3:
-      while (1)
-      {
-
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(12, 16);
-        display.println(F("COMP3"));
-        display.display();
-
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-        if (ok == LOW)
-        {
-          delay(300);
-          digitalWrite(8, HIGH);
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto menu;
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          digitalWrite(8, LOW);
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    next1:
-      while (1)
-      {
-
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(15, 0);
-        display.println(F(" MODE   FAN "));
-        display.display();
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-
-        if (ok == LOW)
-        {
-          delay(300);
-          digitalWrite(8, LOW);
-          delay(300);
-          digitalWrite(9, LOW);
-          delay(300);
-          digitalWrite(10, LOW);
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          goto menu;
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto modeturboxxx;
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    modeturboxxx:
-      while (1)
-      {
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(15, 0);
-        display.println(F(" MODE  TURBO  "));
-        display.display();
-
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-
-        if (ok == LOW)
-        {
-
-          display.clearDisplay();
-          display.setTextSize(2);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(15, 25);
-          display.println(F("PROSES!!!"));
-          display.display();
-
-          delay(7000);
-          digitalWrite(8, HIGH);
-          delay(12000);
-          digitalWrite(9, HIGH);
-          delay(9000);
-          digitalWrite(10, HIGH);
-
-          display.clearDisplay();
-          display.setTextSize(1);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(15, 0);
-          display.println(F(" MODE TURBO ACTIV  "));
-          display.display();
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto timer;
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          goto next1;
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-
-    timer:
-      while (1)
-      {
-
-        display.clearDisplay();
-        display.setTextSize(3);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(19, 20);
-        display.println(F("TIMER"));
-        display.display();
-        ok = digitalRead(sw1);
-        next = digitalRead(sw2);
-        back = digitalRead(sw3);
-        a01 = digitalRead(ov1);
-        a02 = digitalRead(ov2);
-        a03 = digitalRead(ov3);
-        a04 = digitalRead(ov4);
-        a05 = digitalRead(ov5);
-        a06 = digitalRead(ov6);
-        a07 = digitalRead(ov7);
-        a08 = digitalRead(ov8);
-        a09 = digitalRead(ov9);
-        MATI = digitalRead(OFF);
-        if (MATI == LOW)
-        {
-          delay(3000);
-          goto OFFMODE;
-        }
-        if (ok == LOW)
-        {
-
-          delay(300);
-          digitalWrite(8, LOW);
-          delay(300);
-          digitalWrite(9, LOW);
-          delay(300);
-          digitalWrite(10, LOW);
-
-          // MODE TIMER
-        }
-        if (back == LOW)
-        {
-          delay(300);
-          goto modeturboxxx;
-        }
-        if (next == LOW)
-        {
-          delay(300);
-          goto menu;
-        }
-        /// comp1
-        if (a01 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-
-        /// comp2
-        if (a02 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// comp3
-        if (a03 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-
-        /// motor
-        if (a04 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC4"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(7, LOW);
-          delay(10000);
-        }
-        /// WPUMP
-        if (a05 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORC5"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(6, LOW);
-          delay(10000);
-        }
-
-        /// HL1
-        if (a06 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH1"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(10, LOW);
-          delay(10000);
-        }
-        /// HL2
-        if (a07 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH2"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(9, LOW);
-          delay(10000);
-        }
-
-        /// HL3
-        if (a08 == HIGH)
-        {
-          display.clearDisplay();
-          display.setTextSize(3);
-          display.setTextColor(SSD1306_WHITE);
-          display.setCursor(19, 20);
-          display.println(F("ERORH3"));
-          display.display();
-
-          digitalWrite(5, HIGH);
-          digitalWrite(4, LOW);
-          digitalWrite(2, HIGH);
-          digitalWrite(8, LOW);
-          delay(10000);
-        }
-      }
-    }
+    safetyShutdown();
+    return;
   }
 
-LCDOFF:
-  while (1)
+  else if (waktu - gettempsuhu > 5000)
   {
-
-    MATI = digitalRead(OFF);
-    display.clearDisplay();
-    display.display();
-    if (MATI == HIGH)
-    {
-      delay(300);
-      goto OFFMODE;
-    }
+    standby();
+    gettempsuhu = millis();
   }
+  Setting();
+
+  delay(100);
 }
